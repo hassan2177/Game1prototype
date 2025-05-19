@@ -1,0 +1,344 @@
+using System.Collections;
+using UnityEngine;
+
+public class PlayerCombatPhysical : MonoBehaviour
+{   public AimCinemachineFreeLook acf;
+    public Animator animator;
+    public Transform enemyTarget;             // Reference to the enemy
+    public GameObject camerafreelook;
+    
+    public Rigidbody ballRigidbody;
+    public Rigidbody targettransformrb; 
+    public Transform transformtarget1;
+    public Camera playerCamera;
+    public GameObject parentObject; 
+    public GameObject childObject; 
+    public Collider triggerCollider;
+    public EnemyDetection enemyDetectionScript;
+    public LayerMask enemyLayer;
+    public string[] comboTriggers;            // List of animation trigger names for the combo
+    public float[] comboDelays;               // Custom delays between each combo step
+    public int[] comboDamage;                 // Damage dealt at each step of the combo
+    public float comboInputWindow = 1f;
+    public float minComboDelay = 0.4f;
+    public float ATTACKINGDISTANCE = 1f;
+    public int currentComboIndex = 0;
+    private float lastInputTime = 0f;
+    public float detectionRange = 4f; 
+    public float multipleattackdetectionRange = 400f; 
+    public float defaultdetectionRange = 0.174f; 
+    public float rundetectionRange = 0.264f;           // Layer for enemies
+    public float moveSpeed = 1.0f;
+    public float attackDistanceForPlayer = 0.1f;
+    public float DistanceForPlayercombos = 1.5f;
+    public float Movetowardsenemystopdistance = 0.1f;
+     public float MultipleAttackmoveSpeed = 1.0f;
+    public float rotationSpeed = 5f; 
+    public float CloseattackDistanceForPlayer = 0.1f;
+    public float MultipleattackDistanceForPlayer = 0.1f;
+    public float SEattackdistance = 0.1f;
+    public float moveTowardsEnemyDuration = 0.8f;
+     public float lookTowardsEnemyDuration = 2f;
+    public float moveTowardsEnemyMultpleenemyDuration = 0.8f;
+    public float comboallowedtimer = 1f ;
+    public float throwForce = 10f;
+    public float slowdownFactor = 0.4f;            // How much to slow down (1 = normal speed)
+    public float slowdownDuration = 1.6f;          // Duration of the slowdown effect in seconds
+    public float slowdownDuration2 = 0.26f; 
+    public int currentComboStep = 0;
+    public float MovetowardShieldsenemystopdistance = 0.1f;
+    public float comboResetTime = 1.0f;
+    public float[] minComboDelays = { 0.4f, 0.5f, 0.6f, 0.7f }; // Adjust as needed
+    public float[] comboResetTimes = { 1.0f, 1.2f, 1.5f, 2.0f }; // Adjust as needed
+
+  
+    public float combo1Hit1Damage = 15f;
+    public int combo1Hit2Damage = 20;
+    public int combo1Hit3Damage = 20;
+    public int combo1Hit4Damage = 30;
+
+    private int level = 0;       // Current level
+    private int maxLevel = 3;   // Maximum level
+
+    private const string LevelKey = "ComboLevel";
+    private const string Combo1Hit1Key = "Combo1Hit1Damage";
+    private const string Combo1Hit2Key = "Combo1Hit2Damage";
+    private const string Combo1Hit3Key = "Combo1Hit3Damage";
+    private const string Combo1Hit4Key = "Combo1Hit4Damage";
+
+
+
+
+    public bool findex = false;
+     public bool IsInOverdrive = false;
+    private bool isInRange = false;
+    private bool moveToTarget = false;
+    public bool takedownn = false;
+    public bool ispickedup = false;
+    public bool canAcceptInput = true;
+    public bool isInCombo = false;
+    public bool comboallowed = false;
+    public bool combo1ani1 = false;
+    public bool combo1ani2 = false;
+    public bool combo1ani3 = false;
+    public bool combo1ani4 = false;
+    public bool combo1ani1playing = false;
+    public bool combo1ani2playing = false;
+    public bool combo1ani3playing = false;
+    public bool combo1ani4playing = false;
+    public bool iscloseattack = false;
+    public bool cancounter = true;
+     public bool isperforminghit = false;
+    public float lastAttackTime;
+    public bool canContinueCombo = true;
+     public bool isMultipleAttack = false;
+     public bool ismoving = true;
+   // Reference to the external trigger collider
+
+
+
+
+
+
+
+
+
+
+    /// <summary>
+    /// Levels up all combo hit damages based on the respective percentages.
+    /// </summary>
+
+    /// <summary>
+    /// Calculates the new damage after applying the percentage increase.
+    /// </summary>
+    /// <param name="damage">The original damage.</param>
+    /// <param name="percentageIncrease">The percentage increase to apply.</param>
+    /// <returns>The new damage value.</returns>
+    private float LevelUpDamage(float damage, float percentageIncrease)
+    {
+        return damage * (1 + percentageIncrease);
+    }
+
+    /// <summary>
+    /// Returns the percentage increase based on the current level.
+    /// </summary>
+    /// <param name="level">The current level.</param>
+    /// <returns>The percentage increase.</returns>
+    private float GetPercentageIncrease(int level)
+    {
+        switch (level)
+        {
+            case 1: return 0.15f; // 15% increase
+            case 2: return 0.30f; // 30% increase
+            case 3: return 0.50f; // 50% increase
+            default: return 0f;   // No increase
+        }
+    }
+
+    /// <summary>
+    /// Saves the current progress to PlayerPrefs.
+    /// </summary>
+    private void SaveProgress()
+    {
+        PlayerPrefs.SetInt(LevelKey, level);
+        PlayerPrefs.SetFloat(Combo1Hit1Key, combo1Hit1Damage);
+        PlayerPrefs.SetInt(Combo1Hit2Key, combo1Hit2Damage);
+        PlayerPrefs.SetInt(Combo1Hit3Key, combo1Hit3Damage);
+        PlayerPrefs.SetInt(Combo1Hit4Key, combo1Hit4Damage);
+        PlayerPrefs.Save();
+
+        Debug.Log("Progress saved.");
+    }
+
+    /// <summary>
+    /// Loads the saved progress from PlayerPrefs.
+    /// </summary>
+    private void LoadProgress()
+    {
+        level = PlayerPrefs.GetInt(LevelKey, 0); // Default level is 0
+        combo1Hit1Damage = PlayerPrefs.GetFloat(Combo1Hit1Key, 10f);
+        combo1Hit2Damage = PlayerPrefs.GetInt(Combo1Hit2Key, 20);
+        combo1Hit3Damage = PlayerPrefs.GetInt(Combo1Hit3Key, 20);
+        combo1Hit4Damage = PlayerPrefs.GetInt(Combo1Hit4Key, 30);
+    }
+
+    /// <summary>
+    /// Resets the saved progress (for testing or debug purposes).
+    /// </summary>
+    public void ResetProgress()
+    {
+        PlayerPrefs.DeleteKey(LevelKey);
+        PlayerPrefs.DeleteKey(Combo1Hit1Key);
+        PlayerPrefs.DeleteKey(Combo1Hit2Key);
+        PlayerPrefs.DeleteKey(Combo1Hit3Key);
+        PlayerPrefs.DeleteKey(Combo1Hit4Key);
+
+        level = 0;
+        combo1Hit1Damage = 10f;
+        combo1Hit2Damage = 20;
+        combo1Hit3Damage = 20;
+        combo1Hit4Damage = 30;
+
+        Debug.Log("Progress reset.");
+    }
+
+    /// <summary>
+    /// Prints the current damage values to the console.
+    /// </summary>
+    private void PrintDamages()
+    {
+        Debug.Log($"Combo 1 Hit 1 Damage: {combo1Hit1Damage}");
+        Debug.Log($"Combo 1 Hit 2 Damage: {combo1Hit2Damage}");
+        Debug.Log($"Combo 1 Hit 3 Damage: {combo1Hit3Damage}");
+        Debug.Log($"Combo 1 Hit 4 Damage: {combo1Hit4Damage}");
+    }
+    public void UnparentFromAll()
+    {
+        transformtarget1.SetParent(null);
+        Debug.Log($"{gameObject.name} has been unparented from all its parents.");
+    }
+   
+
+    
+    void Start()
+    {    LoadProgress();
+        Debug.Log("Loaded Progress:");
+        PrintDamages();
+    
+        if (animator == null)
+        {
+            animator = GetComponent<Animator>();
+        }
+
+      
+    }
+public void STOPMOVING()
+{
+     StartCoroutine(TurnBoolFalseAfterSeconds(2f));
+}
+ //public Rigidbody targettransformrb;
+public IEnumerator TurnBoolFalseAfterSeconds(float seconds)
+{   ismoving = false;
+    // Wait for the specified time
+    yield return new WaitForSeconds(seconds);
+   
+    // Set the bool to false
+    ismoving = true;
+}
+public IEnumerator TurncounterAfterSeconds(float seconds)
+{   cancounter = false;
+    // Wait for the specified time
+    yield return new WaitForSeconds(seconds);
+
+    // Set the bool to false
+    cancounter = true;
+}
+public bool detectingobject = false;
+private EnemyHealth detectedEnemy = null;  
+public void StartBoolTimer()
+{
+    // Start the coroutine to turn the bool false after 2 seconds
+    StartCoroutine(TurnBoolFalseAfterSeconds(2f));
+}
+
+void OnTriggerEnter(Collider other)
+{
+    // Check if the collider belongs to an "Enemy" object
+    if (other.CompareTag("Enemy"))
+    {
+        takedownn = true;
+    }
+    // Check if the collider belongs to an "object"
+    else if (other.CompareTag("object"))
+    {
+        detectingobject = true;
+        childObject = other.gameObject; // Assign the detected object to childObject
+    }
+   
+}
+
+void OnTriggerExit(Collider other)
+{
+    if (other.CompareTag("Enemy"))
+    {
+        takedownn = false;
+    }
+    else if (other.CompareTag("object"))
+    {
+        detectingobject = false;
+        childObject = null; // Reset childObject when out of range
+    }
+   
+}
+
+
+public void MakeChildObject()
+{
+    if (childObject != null)
+    {
+        childObject.transform.SetParent(parentObject.transform);
+        childObject.transform.localPosition = Vector3.zero;
+        childObject.transform.localRotation = Quaternion.identity;
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+public void movingtoattack()
+{       if (!isMultipleAttack)
+    {
+    StartCoroutine(MoveTowardsEnemyForDuration());
+    }
+    else if (isMultipleAttack)
+    {
+        StartCoroutine(MoveTowardsMultipleEnemyForDuration());
+    }
+}
+
+
+
+
+  
+    
+
+   private void PerformCombo()
+    {
+        lastAttackTime = Time.time; // Record the time of this attack
+        canContinueCombo = false;  // Prevent immediate continuation of the combo
+
+        // Trigger the appropriate animation based on the combo step
+        switch (currentComboStep)
+        {
+            case 0:
+                animator.SetTrigger("Attack1");
+                StartCoroutine(TurnBoolFalseAfterSeconds(1.5f));
+                break;
+            case 1:
+                animator.SetTrigger("Attack2");
+                  StartCoroutine(TurnBoolFalseAfterSeconds(1.5f));
+                break;
+            case 2:
+                animator.SetTrigger("Attack3");
+                  StartCoroutine(TurnBoolFalseAfterSeconds(1.5f));
+                break;
+            case 3:
+                animator.SetTrigger("Attack4");
+                  StartCoroutine(TurnBoolFalseAfterSeconds(1.5f));
+                break;
+        }
+
+        // Start the cooldown for the current step
+        StartCoroutine(EnableComboAfterDelay(minComboDelays[currentComboStep]));
+
+        // Increment combo step and reset to 0 if it exceeds the last attack
+        currentComboStep = (currentComboStep + 1) % minComboDelays.Length;
+    }
+    // Note for privacy and portfolio purposes this is not the full script and only contains a portion of the script only
