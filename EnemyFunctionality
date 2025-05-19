@@ -1,0 +1,328 @@
+using UnityEngine;
+using UnityEngine.UI;
+using TMPro;
+using System.Collections;
+using Cinemachine;
+
+
+
+public class EnemyHealth : MonoBehaviour
+{  
+
+
+
+    public Animator enemyAnimator; // Reference to the enemy's Animator
+    public string[] hitAnimations;  // Hit animation trigger names
+public EnemyPatrol script1;
+public EnemyDistract script2;
+public EnemyHealth script3;
+public EnemyMovement script4;
+ public GameObject multipleAVfx; 
+public TextMeshProUGUI healthText; // Reference to the TextMeshPro UI element
+public HitMarker ui;
+public Animator uianimator;  // Reference to the Animator component
+public Image image1;       // Reference to the first UI Image component
+public Image image2;   
+public Transform takedownPosition; 
+public Transform enemy; 
+public Slider healthSlider;
+public Slider sheildSlider;
+public CinemachineImpulseSource si;
+public Image[] healthImages;
+  // Current health of the enemy
+public EnemyMovement em;
+public MoveOnEvent move;
+public AudioSource audioSource;  // Reference to the AudioSource component
+public AudioClip hitsound; // Sound effect when ragdoll is disabled
+public AudioClip heavyhitsound;
+public AudioClip slowmoencounterhitsound;
+
+public GameObject TargetUiForPlayer;
+[SerializeField] public Slider delayedHealthSlider; // Reference to the delayed health slider
+[SerializeField] public float lerpSpeed = 5f;  
+public float currentHealth; 
+public float maxHealth = 100; // Max health of the enemy
+public  float currentsheild; 
+public float maxsheild = 100; // Max health of the enemy
+public float downwardForce = 0.1f; // Force applied downwards to each Rigidbody
+public float slowdownFactor = 0.2f;  // How much to slow down (1 = normal speed)
+public float slowdownDuration = 3f; 
+public float impulseduration = 0.1f;
+public float impulse1power = 0.1f;
+public float impulse2power = 0.1f;
+public float slowmoimpulsepower = 0.1f;
+public float slowmoImpulseFrequency = 0.5f; 
+public float impulsedurationoriginal = 0.1f;
+public float Slowmoimpulseduration = 0.1f;
+
+public int xpReward = 50;  // Amount of XP to give to the player
+public int hitdamage = 30;
+private bool hasPlayedAnimation1 = false;  // Track if UIFade animation has played
+private bool hasPlayedAnimation2 = false;  // Track if UIFade1 animation has played
+public bool isgoingtoattack = false;
+public bool isblocking = false;
+public bool isLevel2Boxer = false;
+public bool slowmotion = false;
+public bool slowmotion1 = false;
+public bool slowmotion2 = false;
+public bool slowmotion3 = false;
+public bool canbeencountered = false;
+public bool isusingshield = false;
+public bool isdead = false;
+public bool enemyencountered = false; 
+public bool isboss = false; 
+   
+  
+void Update()
+    {    if (currentHealth == 550 && !script4.isshielduser)
+          { script4.isshielduser = true;
+             isblocking =true;}
+       
+        if ( !script4.isshielduser)
+          { sheildSlider.interactable = false;
+}
+         UpdateDelayedHealthBar();
+
+        if (Input.GetKeyDown(KeyCode.I))
+        {
+            //EnableRagdoll();
+            TriggerImpulseWithGaintime(8.0f, impulsedurationoriginal);
+        }
+        
+        if (Input.GetKeyDown(KeyCode.J))
+        {
+            DisableRagdoll();
+        }
+          if (currentHealth == 10 )
+    {
+       slowmotion = true;
+    }
+    else{
+        slowmotion = false;
+        }
+///
+    {
+          if (currentHealth == 20 )
+    {
+       slowmotion1 = true;
+    }
+    else
+    {slowmotion1 = false;}
+    }
+    //
+     {
+          if ( currentHealth == 30 )
+    {
+       slowmotion2 = true;
+    }
+    else
+    {slowmotion2 = false;}
+    }
+    //
+      {
+          if ( currentHealth == 40 )
+    {
+       slowmotion3 = true;
+    }
+    else
+    {slowmotion3 = false;}
+    }
+    //
+    }
+    
+
+    public void EnableRagdoll()
+    {
+        // Disable animator and enable ragdoll physics
+        enemyAnimator.enabled = false;
+        //StartCoroutine(SlowDownTime());
+
+        foreach (Rigidbody rb in ragdollRigidbodies)
+        {
+            rb.isKinematic = false;  // Allow physics to affect the ragdoll
+        }
+        //StartCoroutine(ApplyDownwardForce());
+        isRagdollEnabled = true;
+        //StartCoroutine(DisableRagdollAfterDelay(5f));
+
+    }
+
+     void Start()
+    {
+        if (enemyAnimator == null)
+        {
+            enemyAnimator = GetComponent<Animator>();
+        }
+         healthSlider.interactable = false; 
+
+        // Ensure hitAnimations is set up correctly
+      
+         currentHealth = maxHealth;  // Initialize enemy health
+        UpdateHealthUI();     
+         currentsheild = maxsheild; // Initialize enemy health
+          UpdateSheildUI();
+       ragdollRigidbodies = GetComponentsInChildren<Rigidbody>();
+
+        // Apply new mass, drag, and angular drag to each rigidbody
+        foreach (Rigidbody rb in ragdollRigidbodies)
+        {
+            rb.mass = newMass;
+            rb.drag = newDrag;
+            rb.angularDrag = newAngularDrag;
+            //rb.useGravity = false;   // Disable Unity's default gravity
+        }
+         
+       
+    
+    }
+
+   
+  
+    public void Canbeencountered()
+ { isgoingtoattack = true;
+   canbeencountered = true;
+ }
+  public AudioSource shieldhitaudioSource;
+     public AudioSource audioSource1;
+     
+    public AudioClip combo1hit1;
+    public AudioClip combo1hit2;
+    public AudioClip combo1hit3;
+    public AudioClip combo1hit4;
+    public AudioClip combo1hit1damaged;
+    public AudioClip combo1hit2damaged;
+    public AudioClip combo1hit3damaged;
+    public AudioClip combo1hit4damaged;
+
+    public void Playcombo1Clip1()
+    {
+        PlayAudio(combo1hit1);
+    }
+
+    public void Playcombo1Clip2()
+    {
+        PlayAudio(combo1hit2);
+    }
+
+    public void Playcombo1Clip3()
+    {
+        PlayAudio(combo1hit3);
+    }
+
+    public void Playcombo1Clip4()
+    {
+        PlayAudio(combo1hit4);
+    }
+
+
+
+
+
+
+
+    public void PlayEnemy1DamagedClip1()
+    {
+        PlayAudio(combo1hit1damaged);
+    }
+
+    public void PlayEnemy1DamagedClip2()
+    {
+        PlayAudio(combo1hit2damaged);
+    }
+
+    public void PlayEnemy1DamagedClip3()
+    {
+        PlayAudio(combo1hit3damaged);
+    }
+
+    public void PlayEnemy1DamagedClip4()
+    {
+        PlayAudio(combo1hit4damaged);
+    }
+
+   private void PlayAudio(AudioClip clip)
+{
+    if (audioSource1 != null && clip != null)
+    {
+        audioSource1.pitch = Random.Range(0.86f, 1.13f); // Set a random pitch
+        audioSource1.clip = clip;
+        audioSource1.Play();
+    }
+    else
+    {
+        Debug.LogWarning("AudioSource or AudioClip is missing!");
+    }
+}
+ public bool canAttack = true; // Cooldown flag
+
+    public void enemydamagedsound()
+    {
+        if (canAttack)
+        {
+            canAttack = false; // Disable further attacks
+            int randomIndex = Random.Range(0, 4); // Generate a random index between 0 and 3
+            switch (randomIndex)
+            {
+                case 0:
+                    PlayEnemy1DamagedClip1();
+                    break;
+                case 1:
+                    PlayEnemy1DamagedClip2();
+                    break;
+                case 2:
+                    PlayEnemy1DamagedClip3();
+                    break;
+                case 3:
+                    PlayEnemy1DamagedClip4();
+                    break;
+            }
+            Invoke(nameof(ResetAttackCooldown), 2f); // Reset cooldown after 2 seconds
+        }
+        else
+        {
+            Debug.Log("Attack is on cooldown!");
+        }
+    }
+
+    private void ResetAttackCooldown()
+    {
+        canAttack = true; // Re-enable attack
+    }
+    // Function to stop the audio (optional)
+    public void StopAudio()
+    {
+        if (audioSource != null && audioSource.isPlaying)
+        {
+            audioSource.Stop();
+        }
+    }
+
+public void Cannotbeencountered()
+ {isgoingtoattack = false;
+   canbeencountered = false;
+ }
+
+    // Method to deactivate the scripts
+    void DeactivateScripts()
+    {   script4.disableanimator();
+        if (script1 != null) script1.enabled = false;
+        if (script2 != null) script2.enabled = false;
+        if (script3 != null) script3.enabled = false;
+        if (script4 != null) script4.enabled = false;
+        script4.StopAllMovement();
+        
+    }
+    private void PlaySound(AudioClip clip)
+{
+    if (audioSource != null && clip != null)
+    {
+        // Randomize pitch slightly between 0.95 and 1.05 (you can adjust these values)
+        audioSource.pitch = Random.Range(0.92f, 1.07f);
+        
+        audioSource.PlayOneShot(clip);
+    }
+}
+
+      // This is only a portion of the total code for demonstation of mechanics and code logic
+
+   
