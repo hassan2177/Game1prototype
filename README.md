@@ -1,6 +1,6 @@
 🥊 Combat Reign (Prototype) ⚔️
 A High-Fidelity AAA Game Prototype Featuring Punch-Kick Combat & Intelligent AI
-Download & Play on Windows: [https://your-itch-link.itch.io/combat-reign]
+Download & Play on Windows:[ (https://hassan2177.itch.io/aaa)]
 
 🎮 Overview
 This is a Windows-based AAA-style prototype that showcases fast-paced melee combat mechanics powered by an intelligent AI system. Designed as a proof of concept, the game focuses on responsive hand-to-hand combat (punches, kicks, combos) and smart enemy behavior, giving players a glimpse into a high-quality action experience in the making.
@@ -46,7 +46,7 @@ Anyone looking for a polished, early-stage AAA game prototype
 
 📥 Download
 🎮 Windows Build available now:
-🔗  [https://your-itch-link.itch.io/combat-reign]
+🔗 [ https://hassan2177.itch.io/aaa]
 
 💬 Feedback & Future
 Your feedback helps shape the future of Combat Reign. If you encounter bugs, performance issues, or have feature suggestions, please contact us through the Itch.io page.
